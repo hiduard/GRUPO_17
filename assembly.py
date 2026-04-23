@@ -431,6 +431,26 @@ def gerarCodigoComando(comando, ctx):
 
         linhas.append(f"{lbl_fim}:")
         return linhas
+    
+    if tipo == "while":
+        lbl_inicio = novoRotulo(ctx, "WHILE_INICIO", comando["linha"])
+        lbl_fim = novoRotulo(ctx, "WHILE_FIM", comando["linha"])
+
+        linhas.append("")
+        linhas.append(f"    @ WHILE linha {comando['linha']}")
+        linhas.append(f"    @ Fonte: {comando['fonte']}")
+        linhas.append(f"{lbl_inicio}:")
+
+        linhas.extend(
+            gerarCodigoCondicao(comando["condicao"], lbl_fim, comando["linha"], ctx)
+        )
+
+        for item in comando["bloco"]:
+            linhas.extend(gerarCodigoComando(item, ctx))
+
+        linhas.append(f"    b {lbl_inicio}") 
+        linhas.append(f"{lbl_fim}:")
+        return linhas
 
     raise ValueError(f"Comando nao suportado ainda: {tipo}")
 
