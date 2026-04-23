@@ -22,24 +22,77 @@ def garantir_pasta(caminho):
     if pasta:
         os.makedirs(pasta, exist_ok=True)
 
+def salvar_resultado_parser(resultado, caminho):
+    garantir_pasta(caminho)
+    with open(caminho, "w", encoding="utf-8") as arquivo:
+        arquivo.write(f"ACEITO: {resultado['aceito']}\n\n")
+
+        if resultado.get("erros_lexicos"):
+            arquivo.write("ERROS LEXICOS:\n")
+            for e in resultado["erros_lexicos"]:
+                arquivo.write(f"  {e}\n")
+            arquivo.write("\n")
+            return
+
+        if resultado["erro"]:
+            arquivo.write(f"ERRO SINTATICO: {resultado['erro']}\n\n")
+            if resultado["derivacoes"]:
+                arquivo.write("DERIVACOES APLICADAS ATE O ERRO:\n")
+                for derivacao in resultado["derivacoes"]:
+                    arquivo.write(json.dumps(derivacao, ensure_ascii=False))
+                    arquivo.write("\n")
+            return
+
+        arquivo.write("DERIVACOES:\n")
+        for derivacao in resultado["derivacoes"]:
+            arquivo.write(json.dumps(derivacao, ensure_ascii=False))
+            arquivo.write("\n")
+
+def salvar_assembly(codigo, caminho):
+    garantir_pasta(caminho)
+    with open(caminho, "w", encoding="utf-8") as arquivo:
+        arquivo.write(codigo)
+
+def carregar_entrada(nome_arquivo):
+    if nome_arquivo.endswith(".tok") or nome_arquivo.endswith(".tokens"):
+        return lerTokens(nome_arquivo)
+
+    linhas = lerArquivo(nome_arquivo) 
+    tokens_por_linha = []
+    for numero_linha, linha in linhas:
+        tokens = parseExpressao(linha)
+        tokens_por_linha.append((numero_linha, linha, tokens))
+    return tokens_por_linha
+       
+
 def main():
     if len(sys.argv) != 2:
         print("Uso: python main.py <arquivo_de_entrada>")
-        print("Exemplo: python main.py teste1.txt")
         return
 
     nome_arquivo = sys.argv[1]
-
     if not os.path.isfile(nome_arquivo):
         print(f"Erro: arquivo '{nome_arquivo}' nao encontrado.")
         return
 
-    tokens_por_linha = []
+    tokens_por_linha = carregar_entrada(nome_arquivo)
     gramatica = construirGramatica()
-    resultado = parsear(tokens_por_linha, gramatica["tabela"])
-    arvore = gerarArvore(resultado)
-    codigo = gerarAssembly(arvore)
+    resultado = parsear(tokens_por_lingua, gramatica["tabela"])
 
+    salvarTokens(tokens_por_linha, "output/tokens_saida.txt")
+    salvar_resultado_parser(resultado, "output/parser_resultado.txt")
+
+    print(f"ACEITO: {resultado['aceito']}")
+
+    if not resultado["aceito"]:
+        return
+
+    arvore = gerarArvore(resultado)
+    salvarArvoreJSON(arvore, "output/arvore.json")
+    salvarArvoreTexto(arvore, "output/arvore.txt")
+
+    codigo = gerarAssembly(arvore)
+    salvar_assembly(codigo, "output/programa.s")
 
 if __name__ == "__main__":
     main()
