@@ -1,3 +1,4 @@
+# Integrantes do grupo (ordem alfabética):
 # Eduardo Hideo Itinoseke Ogassawara - hiduard
 # Gabriel Barbosa Fernandes de Oliveira - GabrielBarbosaFernandes
 #
@@ -5,10 +6,20 @@
 
 from tokens import (
     LPAREN,
+    RPAREN,
+    NUMBER,
+    MEMORY,
+    OPERATOR,
+    REL_OP,
+    RES,
+    START,
     END,
+    IF,
     ELSE,
     ENDIF,
+    WHILE,
     ENDWHILE,
+    INVALID,
 )
 
 PROMOCAO_LPAREN = {
