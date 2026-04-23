@@ -344,3 +344,9 @@ class ParserLL1:
         self.consumir("LPAREN_ENDIF")
         self.consumir(ENDIF)
         self.consumir(RPAREN)
+
+    def parse_abre_endwhile(self):
+        self.escolherProducao("abre_endwhile")
+        self.consumir("LPAREN_ENDWHILE")
+        self.consumir(ENDWHILE)
+        self.consumir(RPAREN)
