@@ -155,6 +155,7 @@ def construirGramatica():
 
     nao_terminais = set(producoes.keys())
     first = calcularFirst(producoes, nao_terminais)
+    follow = calcularFollow(producoes, nao_terminais, first, "programa")
 
 
     return {
@@ -163,13 +164,10 @@ def construirGramatica():
         "nao_terminais": nao_terminais,
         "terminais": TERMINAIS,
         "first": first,
+        "follow": follow,
     }
 
 def calcularFirst(producoes, nao_terminais):
-    """
-    Calcula o conjunto FIRST para cada nao-terminal usando o algoritmo de
-    ponto fixo: repete ate que nenhum FIRST mude.
-    """
     first = {nt: set() for nt in nao_terminais}
 
     mudou = True
@@ -197,7 +195,7 @@ def calcularFirstDaSequencia(sequencia, first, nao_terminais):
             return resultado
 
         if simbolo not in nao_terminais:
-            resultado.add(simbolo)  # terminal: FIRST = { terminal }
+            resultado.add(simbolo)  
             return resultado
 
         resultado.update(first[simbolo] - {EPSILON})
@@ -207,6 +205,33 @@ def calcularFirstDaSequencia(sequencia, first, nao_terminais):
 
     resultado.add(EPSILON)
     return resultado
+
+def calcularFollow(producoes, nao_terminais, first, simbolo_inicial):
+    follow = {nt: set() for nt in nao_terminais}
+    follow[simbolo_inicial].add(EOF)
+
+    mudou = True
+    while mudou:
+        mudou = False
+        for A, regras in producoes.items():
+            for regra in regras:
+                for i, B in enumerate(regra):
+                    if B not in nao_terminais:
+                        continue
+
+                    beta = regra[i + 1:]
+                    first_beta = calcularFirstDaSequencia(beta, first, nao_terminais)
+
+                    tamanho_antes = len(follow[B])
+                    follow[B].update(first_beta - {EPSILON})
+
+                    if EPSILON in first_beta or len(beta) == 0:
+                        follow[B].update(follow[A])
+
+                    if len(follow[B]) != tamanho_antes:
+                        mudou = True
+
+    return follow
 
 def formatarRegra(A, regra):
     return f"{A} -> {' '.join(regra)}"
