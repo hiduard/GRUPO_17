@@ -496,3 +496,44 @@ class ParserLL1:
             return {"tipo": "relacional", "operador": op,
                     "esquerda": esq, "direita": dir_}
         self.erro("resto_sub_sub: regra desconhecida")
+
+
+def parsear(tokens_por_linha, tabela_ll1):
+    # 1. Achatamento
+    fluxo, linhas, fontes = achatarTokens(tokens_por_linha)
+
+    # 2. Filtragem de erros lexicos
+    erros_lexicos, fluxo, linhas = extrairErrosLexicos(fluxo, linhas, fontes)
+    if erros_lexicos:
+        return {
+            "aceito": False,
+            "arvore": None,
+            "derivacoes": [],
+            "erro": None,
+            "erros_lexicos": erros_lexicos,
+        }
+
+    # 3. Promocao de LPAREN
+    fluxo_promovido = promoverLParens(fluxo)
+
+    # 4. Parsing
+    parser = ParserLL1(fluxo_promovido, linhas, fontes, tabela_ll1)
+    try:
+        arvore = parser.parse_programa()
+        if parser.lookahead() != "$":
+            parser.erro("sobraram tokens apos o (END)")
+        return {
+            "aceito": True,
+            "arvore": arvore,
+            "derivacoes": parser.derivacoes,
+            "erro": None,
+            "erros_lexicos": [],
+        }
+    except ValueError as e:
+        return {
+            "aceito": False,
+            "arvore": None,
+            "derivacoes": parser.derivacoes,
+            "erro": str(e),
+            "erros_lexicos": [],
+        }
