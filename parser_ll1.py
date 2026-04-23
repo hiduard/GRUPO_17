@@ -285,3 +285,62 @@ class ParserLL1:
             op = self.consumir(REL_OP)
             return self.parse_cauda_rel(esq, dir_, op)
         self.erro("resto_sub: regra desconhecida")
+
+    def parse_cauda_rel(self, esq, dir_, op_rel):
+        no_rel = {"tipo": "relacional", "operador": op_rel,
+                  "esquerda": esq, "direita": dir_}
+
+        regra = self.escolherProducao("cauda_rel")
+
+        if regra[0] == RPAREN:
+            self.consumir(RPAREN)
+            return no_rel
+
+        if regra[0] == IF:
+            self.consumir(IF)
+            self.consumir(RPAREN)
+            bloco_then = self.parse_lista("lista_if")
+            fim = self.parse_fim_if()
+            return {
+                "tipo": "if",
+                "condicao": no_rel,
+                "bloco_then": bloco_then,
+                "bloco_else": fim["bloco_else"],
+            }
+
+        if regra[0] == WHILE:
+            self.consumir(WHILE)
+            self.consumir(RPAREN)
+            bloco = self.parse_lista("lista_while")
+            self.parse_abre_endwhile()
+            return {
+                "tipo": "while",
+                "condicao": no_rel,
+                "bloco": bloco,
+            }
+
+        self.erro("cauda_rel: regra desconhecida")
+
+    def parse_fim_if(self):
+        regra = self.escolherProducao("fim_if")
+        if regra[0] == "abre_else":
+            self.parse_abre_else()
+            bloco_else = self.parse_lista("lista_if")
+            self.parse_abre_endif()
+            return {"bloco_else": bloco_else}
+        if regra[0] == "abre_endif":
+            self.parse_abre_endif()
+            return {"bloco_else": None}
+        self.erro("fim_if: regra desconhecida")
+
+    def parse_abre_else(self):
+        self.escolherProducao("abre_else")
+        self.consumir("LPAREN_ELSE")
+        self.consumir(ELSE)
+        self.consumir(RPAREN)
+
+    def parse_abre_endif(self):
+        self.escolherProducao("abre_endif")
+        self.consumir("LPAREN_ENDIF")
+        self.consumir(ENDIF)
+        self.consumir(RPAREN)
