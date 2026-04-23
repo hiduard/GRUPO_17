@@ -140,3 +140,148 @@ class ParserLL1:
             if regra == ["epsilon"]:
                 return comandos
             comandos.append(self.parse_comando())
+
+    def parse_comando(self):
+        self.escolherProducao("comando")
+        linha = self.linhaAtual()
+        fonte = self.fonteAtual()
+        self.consumir("LPAREN_CMD")
+        no = self.parse_interior()
+        if no["tipo"] in ("if", "while"):
+            no["linha"] = linha
+            no["fonte"] = fonte
+            return no
+        return {
+            "tipo": "expressao",
+            "linha": linha,
+            "fonte": fonte,
+            "estrutura": no,
+        }
+
+    def parse_interior(self):
+        regra = self.escolherProducao("interior")
+        if regra[0] == NUMBER:
+            valor = self.consumir(NUMBER)
+            return self.parse_apos_num({"tipo": "numero", "valor": valor})
+        if regra[0] == MEMORY:
+            nome = self.consumir(MEMORY)
+            return self.parse_apos_mem(nome)
+        if regra[0] == "LPAREN_CMD":
+            self.consumir("LPAREN_CMD")
+            sub_expr = self.parse_sub()
+            return self.parse_apos_sub(sub_expr)
+        self.erro("interior: regra desconhecida")
+
+    def parse_apos_num(self, no_num):
+        regra = self.escolherProducao("apos_num")
+
+        if regra[0] == RES:
+            self.consumir(RES)
+            self.consumir(RPAREN)
+            return {"tipo": "carregar_resultado", "indice": no_num["valor"]}
+
+        if regra[0] == NUMBER:
+            valor_b = self.consumir(NUMBER)
+            no_b = {"tipo": "numero", "valor": valor_b}
+            return self.parse_resto_num(no_num, no_b)
+
+        if regra[0] == MEMORY:
+            nome_mem = self.consumir(MEMORY)
+            return self.parse_resto_mem_grava(no_num, nome_mem)
+
+        if regra[0] == "LPAREN_CMD":
+            self.consumir("LPAREN_CMD")
+            no_sub = self.parse_sub()
+            return self.parse_resto_sub(no_num, no_sub)
+
+        self.erro("apos_num: regra desconhecida")
+
+    def parse_apos_mem(self, nome_mem):
+        regra = self.escolherProducao("apos_mem")
+
+        if regra[0] == RPAREN:
+            self.consumir(RPAREN)
+            return {"tipo": "carregar_memoria", "nome": nome_mem}
+
+        no_mem = {"tipo": "carregar_memoria", "nome": nome_mem}
+
+        if regra[0] == NUMBER:
+            valor_b = self.consumir(NUMBER)
+            no_b = {"tipo": "numero", "valor": valor_b}
+            return self.parse_resto_num(no_mem, no_b)
+
+        if regra[0] == MEMORY:
+            nome2 = self.consumir(MEMORY)
+            return self.parse_resto_mem_grava(no_mem, nome2)
+
+        if regra[0] == "LPAREN_CMD":
+            self.consumir("LPAREN_CMD")
+            no_sub = self.parse_sub()
+            return self.parse_resto_sub(no_mem, no_sub)
+
+        self.erro("apos_mem: regra desconhecida")
+
+    def parse_apos_sub(self, no_sub):
+        regra = self.escolherProducao("apos_sub")
+
+        if regra[0] == RPAREN:
+            self.consumir(RPAREN)
+            return no_sub
+
+        if regra[0] == NUMBER:
+            valor_b = self.consumir(NUMBER)
+            no_b = {"tipo": "numero", "valor": valor_b}
+            return self.parse_resto_num(no_sub, no_b)
+
+        if regra[0] == MEMORY:
+            nome2 = self.consumir(MEMORY)
+            return self.parse_resto_mem_grava(no_sub, nome2)
+
+        if regra[0] == "LPAREN_CMD":
+            self.consumir("LPAREN_CMD")
+            no_sub2 = self.parse_sub()
+            return self.parse_resto_sub(no_sub, no_sub2)
+
+        self.erro("apos_sub: regra desconhecida")
+
+    def parse_resto_num(self, esq, dir_):
+        regra = self.escolherProducao("resto_num")
+        if regra[0] == OPERATOR:
+            op = self.consumir(OPERATOR)
+            self.consumir(RPAREN)
+            return {"tipo": "binaria", "operador": op, "esquerda": esq, "direita": dir_}
+        if regra[0] == REL_OP:
+            op = self.consumir(REL_OP)
+            return self.parse_cauda_rel(esq, dir_, op)
+        self.erro("resto_num: regra desconhecida")
+
+    def parse_resto_mem_grava(self, valor_ou_exp, nome_mem):
+        regra = self.escolherProducao("resto_mem_grava")
+        if regra[0] == RPAREN:
+            self.consumir(RPAREN)
+            return {"tipo": "gravar_memoria", "nome": nome_mem, "valor": valor_ou_exp}
+
+        no_mem = {"tipo": "carregar_memoria", "nome": nome_mem}
+
+        if regra[0] == OPERATOR:
+            op = self.consumir(OPERATOR)
+            self.consumir(RPAREN)
+            return {"tipo": "binaria", "operador": op,
+                    "esquerda": valor_ou_exp, "direita": no_mem}
+
+        if regra[0] == REL_OP:
+            op = self.consumir(REL_OP)
+            return self.parse_cauda_rel(valor_ou_exp, no_mem, op)
+
+        self.erro("resto_mem_grava: regra desconhecida")
+
+    def parse_resto_sub(self, esq, dir_):
+        regra = self.escolherProducao("resto_sub")
+        if regra[0] == OPERATOR:
+            op = self.consumir(OPERATOR)
+            self.consumir(RPAREN)
+            return {"tipo": "binaria", "operador": op, "esquerda": esq, "direita": dir_}
+        if regra[0] == REL_OP:
+            op = self.consumir(REL_OP)
+            return self.parse_cauda_rel(esq, dir_, op)
+        self.erro("resto_sub: regra desconhecida")
