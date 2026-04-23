@@ -250,6 +250,32 @@ def gerarCodigoRestoInteiro(esquerda, direita, linha_atual, ctx):
     linhas.extend(gerarCodigoIntParaDouble("r4", "s0", "d0"))
     return linhas
 
+def gerarCodigoPotencia(esquerda, direita, linha_atual, ctx):
+    lbl_loop = novoRotulo(ctx, "POT_LOOP", linha_atual)
+    lbl_fim  = novoRotulo(ctx, "POT_FIM", linha_atual)
+
+    linhas = []
+
+    linhas.extend(esquerda)
+    linhas.append("    vpush {d0}")         
+
+    linhas.extend(direita)
+    linhas.extend(gerarCodigoDoubleParaInt("d0", "s0", "r4"))  
+
+    linhas.append("    vpop {d2}")           
+    linhas.append("    ldr r0, =CONST_1_0")
+    linhas.append("    vldr d0, [r0]")       
+
+    linhas.append("    cmp r4, #0")
+    linhas.append(f"    ble {lbl_fim}")       
+
+    linhas.append(f"{lbl_loop}:")
+    linhas.append("    vmul.f64 d0, d0, d2")
+    linhas.append("    subs r4, r4, #1")
+    linhas.append(f"    bne {lbl_loop}")
+
+    linhas.append(f"{lbl_fim}:")
+    return linhas
 
 def gerarCodigoNo(no, linha_atual, ctx):
     tipo = no["tipo"]
@@ -317,6 +343,13 @@ def gerarCodigoNo(no, linha_atual, ctx):
                 ctx,
             )
         
+        if operador == "^":
+            return gerarCodigoPotencia(
+                gerarCodigoNo(no["esquerda"], linha_atual, ctx),
+                gerarCodigoNo(no["direita"], linha_atual, ctx),
+                linha_atual,
+                ctx,
+            )
         raise ValueError(f"Operador binario ainda nao implementado: {operador}")
     raise ValueError(f"No nao suportado ainda: {tipo}")
 
