@@ -277,6 +277,78 @@ def gerarCodigoPotencia(esquerda, direita, linha_atual, ctx):
     linhas.append(f"{lbl_fim}:")
     return linhas
 
+def gerarCodigoRelacionalComoBoolean(no, linha_atual, ctx):
+    lbl_true = novoRotulo(ctx, "REL_TRUE", linha_atual)
+    lbl_fim  = novoRotulo(ctx, "REL_FIM", linha_atual)
+
+    linhas = []
+    linhas.extend(gerarCodigoNo(no["esquerda"], linha_atual, ctx))
+    linhas.append("    vpush {d0}")
+    linhas.extend(gerarCodigoNo(no["direita"], linha_atual, ctx))
+    linhas.append("    vpop {d1}")
+    linhas.append("    vcmp.f64 d1, d0")
+    linhas.append("    vmrs APSR_nzcv, fpscr")
+
+    operador = no["operador"]
+
+    if operador == "==":
+        linhas.append(f"    beq {lbl_true}")
+    elif operador == "!=":
+        linhas.append(f"    bne {lbl_true}")
+    elif operador == ">":
+        linhas.append(f"    bgt {lbl_true}")
+    elif operador == "<":
+        linhas.append(f"    blt {lbl_true}")
+    elif operador == ">=":
+        linhas.append(f"    bge {lbl_true}")
+    elif operador == "<=":
+        linhas.append(f"    ble {lbl_true}")
+    else:
+        raise ValueError(f"Operador relacional nao suportado: {operador}")
+
+    linhas.append("    ldr r0, =CONST_0_0")
+    linhas.append("    vldr d0, [r0]")
+    linhas.append(f"    b {lbl_fim}")
+
+    linhas.append(f"{lbl_true}:")
+    linhas.append("    ldr r0, =CONST_1_0")
+    linhas.append("    vldr d0, [r0]")
+
+    linhas.append(f"{lbl_fim}:")
+    return linhas
+
+
+
+def gerarCodigoCondicao(no, label_false, linha_atual, ctx):
+    linhas = []
+    linhas.extend(gerarCodigoNo(no["esquerda"], linha_atual, ctx))
+    linhas.append("    vpush {d0}")
+    linhas.extend(gerarCodigoNo(no["direita"], linha_atual, ctx))
+    linhas.append("    vpop {d1}")
+    linhas.append("    vcmp.f64 d1, d0")
+    linhas.append("    vmrs APSR_nzcv, fpscr")
+
+    operador = no["operador"]
+
+    # Branch para false: inverte a condicao
+    if operador == "==":
+        linhas.append(f"    bne {label_false}")
+    elif operador == "!=":
+        linhas.append(f"    beq {label_false}")
+    elif operador == ">":
+        linhas.append(f"    ble {label_false}")
+    elif operador == "<":
+        linhas.append(f"    bge {label_false}")
+    elif operador == ">=":
+        linhas.append(f"    blt {label_false}")
+    elif operador == "<=":
+        linhas.append(f"    bgt {label_false}")
+    else:
+        raise ValueError(f"Operador relacional nao suportado: {operador}")
+
+    return linhas
+
+
 def gerarCodigoNo(no, linha_atual, ctx):
     tipo = no["tipo"]
 
@@ -314,6 +386,10 @@ def gerarCodigoNo(no, linha_atual, ctx):
             f"    ldr r0, =RESULTADO_{linha_destino}",
             "    vldr d0, [r0]",
         ]
+    
+    if tipo == "relacional":
+        return gerarCodigoRelacionalComoBoolean(no, linha_atual, ctx)
+    
     if tipo == "binaria":
         operador = no["operador"]
 
@@ -367,6 +443,59 @@ def gerarCodigoComando(comando, ctx):
         linhas.extend(codigo)
         linhas.append(f"    ldr r0, =RESULTADO_{comando['linha']}")
         linhas.append("    vstr d0, [r0]")
+        return linhas
+    if tipo == "if":
+        lbl_else = novoRotulo(ctx, "IF_ELSE", comando["linha"])
+        lbl_fim = novoRotulo(ctx, "IF_FIM", comando["linha"])
+
+        linhas.append("")
+        linhas.append(f"    @ IF linha {comando['linha']}")
+        linhas.append(f"    @ Fonte: {comando['fonte']}")
+
+        if comando["bloco_else"] is None:
+            linhas.extend(
+                gerarCodigoCondicao(comando["condicao"], lbl_fim, comando["linha"], ctx)
+            )
+
+            for item in comando["bloco_then"]:
+                linhas.extend(gerarCodigoComando(item, ctx))
+
+            linhas.append(f"{lbl_fim}:")
+            return linhas
+        linhas.extend(
+            gerarCodigoCondicao(comando["condicao"], lbl_else, comando["linha"], ctx)
+        )
+
+        for item in comando["bloco_then"]:
+
+            linhas.extend(gerarCodigoComando(item, ctx))
+        linhas.append(f"    b {lbl_fim}")
+        linhas.append(f"{lbl_else}:")
+
+        for item in comando["bloco_else"]:
+            linhas.extend(gerarCodigoComando(item, ctx))
+
+        linhas.append(f"{lbl_fim}:")
+        return linhas
+    
+    if tipo == "while":
+        lbl_inicio = novoRotulo(ctx, "WHILE_INICIO", comando["linha"])
+        lbl_fim = novoRotulo(ctx, "WHILE_FIM", comando["linha"])
+
+        linhas.append("")
+        linhas.append(f"    @ WHILE linha {comando['linha']}")
+        linhas.append(f"    @ Fonte: {comando['fonte']}")
+        linhas.append(f"{lbl_inicio}:")
+
+        linhas.extend(
+            gerarCodigoCondicao(comando["condicao"], lbl_fim, comando["linha"], ctx)
+        )
+
+        for item in comando["bloco"]:
+            linhas.extend(gerarCodigoComando(item, ctx))
+
+        linhas.append(f"    b {lbl_inicio}") 
+        linhas.append(f"{lbl_fim}:")
         return linhas
 
     raise ValueError(f"Comando nao suportado ainda: {tipo}")
