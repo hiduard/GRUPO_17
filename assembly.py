@@ -277,6 +277,48 @@ def gerarCodigoPotencia(esquerda, direita, linha_atual, ctx):
     linhas.append(f"{lbl_fim}:")
     return linhas
 
+def gerarCodigoRelacionalComoBoolean(no, linha_atual, ctx):
+    lbl_true = novoRotulo(ctx, "REL_TRUE", linha_atual)
+    lbl_fim  = novoRotulo(ctx, "REL_FIM", linha_atual)
+
+    linhas = []
+    linhas.extend(gerarCodigoNo(no["esquerda"], linha_atual, ctx))
+    linhas.append("    vpush {d0}")
+    linhas.extend(gerarCodigoNo(no["direita"], linha_atual, ctx))
+    linhas.append("    vpop {d1}")
+    linhas.append("    vcmp.f64 d1, d0")
+    linhas.append("    vmrs APSR_nzcv, fpscr")
+
+    operador = no["operador"]
+
+    if operador == "==":
+        linhas.append(f"    beq {lbl_true}")
+    elif operador == "!=":
+        linhas.append(f"    bne {lbl_true}")
+    elif operador == ">":
+        linhas.append(f"    bgt {lbl_true}")
+    elif operador == "<":
+        linhas.append(f"    blt {lbl_true}")
+    elif operador == ">=":
+        linhas.append(f"    bge {lbl_true}")
+    elif operador == "<=":
+        linhas.append(f"    ble {lbl_true}")
+    else:
+        raise ValueError(f"Operador relacional nao suportado: {operador}")
+
+    linhas.append("    ldr r0, =CONST_0_0")
+    linhas.append("    vldr d0, [r0]")
+    linhas.append(f"    b {lbl_fim}")
+
+    linhas.append(f"{lbl_true}:")
+    linhas.append("    ldr r0, =CONST_1_0")
+    linhas.append("    vldr d0, [r0]")
+
+    linhas.append(f"{lbl_fim}:")
+    return linhas
+
+
+
 def gerarCodigoCondicao(no, label_false, linha_atual, ctx):
     linhas = []
     linhas.extend(gerarCodigoNo(no["esquerda"], linha_atual, ctx))
@@ -344,6 +386,10 @@ def gerarCodigoNo(no, linha_atual, ctx):
             f"    ldr r0, =RESULTADO_{linha_destino}",
             "    vldr d0, [r0]",
         ]
+    
+    if tipo == "relacional":
+        return gerarCodigoRelacionalComoBoolean(no, linha_atual, ctx)
+    
     if tipo == "binaria":
         operador = no["operador"]
 
