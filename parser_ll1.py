@@ -29,6 +29,37 @@ PROMOCAO_LPAREN = {
     ENDWHILE: "LPAREN_ENDWHILE",
 }
 
+def achatarTokens(tokens_por_linha):
+    fluxo = []
+    linhas = []
+    fontes = {}
+
+    for numero_linha, fonte, tokens in tokens_por_linha:
+        fontes[numero_linha] = fonte
+        for tok in tokens:
+            fluxo.append(tok)
+            linhas.append(numero_linha)
+
+    return fluxo, linhas, fontes
+
+
+def extrairErrosLexicos(fluxo, linhas, fontes):
+    erros = []
+    novo_fluxo = []
+    novas_linhas = []
+
+    for i, (tipo, valor) in enumerate(fluxo):
+        if tipo == INVALID:
+            linha = linhas[i]
+            fonte = fontes.get(linha, "")
+            erros.append(f"Linha {linha}: token lexico invalido '{valor}' em: {fonte}")
+        else:
+            novo_fluxo.append((tipo, valor))
+            novas_linhas.append(linhas[i])
+
+    return erros, novo_fluxo, novas_linhas
+
+
 def promoverLParens(fluxo):
     promovido = []
     n = len(fluxo)
@@ -49,6 +80,7 @@ def promoverLParens(fluxo):
         promovido.append((classe, valor))
 
     return promovido
+
 
 class ParserLL1:
     def __init__(self, fluxo_promovido, linhas, fontes, tabela):
@@ -464,3 +496,44 @@ class ParserLL1:
             return {"tipo": "relacional", "operador": op,
                     "esquerda": esq, "direita": dir_}
         self.erro("resto_sub_sub: regra desconhecida")
+
+
+def parsear(tokens_por_linha, tabela_ll1):
+    # 1. Achatamento
+    fluxo, linhas, fontes = achatarTokens(tokens_por_linha)
+
+    # 2. Filtragem de erros lexicos
+    erros_lexicos, fluxo, linhas = extrairErrosLexicos(fluxo, linhas, fontes)
+    if erros_lexicos:
+        return {
+            "aceito": False,
+            "arvore": None,
+            "derivacoes": [],
+            "erro": None,
+            "erros_lexicos": erros_lexicos,
+        }
+
+    # 3. Promocao de LPAREN
+    fluxo_promovido = promoverLParens(fluxo)
+
+    # 4. Parsing
+    parser = ParserLL1(fluxo_promovido, linhas, fontes, tabela_ll1)
+    try:
+        arvore = parser.parse_programa()
+        if parser.lookahead() != "$":
+            parser.erro("sobraram tokens apos o (END)")
+        return {
+            "aceito": True,
+            "arvore": arvore,
+            "derivacoes": parser.derivacoes,
+            "erro": None,
+            "erros_lexicos": [],
+        }
+    except ValueError as e:
+        return {
+            "aceito": False,
+            "arvore": None,
+            "derivacoes": parser.derivacoes,
+            "erro": str(e),
+            "erros_lexicos": [],
+        }
