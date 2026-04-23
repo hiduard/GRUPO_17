@@ -156,6 +156,9 @@ def construirGramatica():
     nao_terminais = set(producoes.keys())
     first = calcularFirst(producoes, nao_terminais)
     follow = calcularFollow(producoes, nao_terminais, first, "programa")
+    tabela, conflitos = construirTabelaLL1(
+        producoes, nao_terminais, TERMINAIS, first, follow
+    )
 
 
     return {
@@ -165,6 +168,9 @@ def construirGramatica():
         "terminais": TERMINAIS,
         "first": first,
         "follow": follow,
+        "tabela": tabela,
+        "conflitos": conflitos,
+
     }
 
 def calcularFirst(producoes, nao_terminais):
@@ -233,5 +239,64 @@ def calcularFollow(producoes, nao_terminais, first, simbolo_inicial):
 
     return follow
 
+def construirTabelaLL1(producoes, nao_terminais, terminais, first, follow):
+    tabela = {nt: {} for nt in nao_terminais}
+    conflitos = []
+
+    for A, regras in producoes.items():
+        for regra in regras:
+            first_regra = calcularFirstDaSequencia(regra, first, nao_terminais)
+
+            for terminal in first_regra - {EPSILON}:
+                if terminal in tabela[A]:
+                    conflitos.append((A, terminal, tabela[A][terminal], regra))
+                else:
+                    tabela[A][terminal] = regra
+
+            if EPSILON in first_regra:
+                for terminal in follow[A]:
+                    if terminal in tabela[A]:
+                        conflitos.append((A, terminal, tabela[A][terminal], regra))
+                    else:
+                        tabela[A][terminal] = regra
+
+    return tabela, conflitos
+
 def formatarRegra(A, regra):
     return f"{A} -> {' '.join(regra)}"
+
+def exibirGramatica(gramatica):
+    print("SIMBOLO INICIAL:")
+    print(gramatica["simbolo_inicial"])
+    print()
+
+    print("PRODUCOES:")
+    for A, regras in gramatica["producoes"].items():
+        for regra in regras:
+            print(formatarRegra(A, regra))
+    print()
+
+    print("FIRST:")
+    for nt in sorted(gramatica["first"]):
+        print(f"FIRST({nt}) = {sorted(gramatica['first'][nt])}")
+    print()
+
+    print("FOLLOW:")
+    for nt in sorted(gramatica["follow"]):
+        print(f"FOLLOW({nt}) = {sorted(gramatica['follow'][nt])}")
+    print()
+
+    print("TABELA LL(1):")
+    for nt in sorted(gramatica["tabela"]):
+        print(f"{nt}:")
+        for terminal, regra in sorted(gramatica["tabela"][nt].items()):
+            print(f"  {terminal} -> {' '.join(regra)}")
+        print()
+
+    if gramatica["conflitos"]:
+        print("CONFLITOS:")
+        for conflito in gramatica["conflitos"]:
+            A, terminal, antiga, nova = conflito
+            print(f"{A}, {terminal}: {antiga} X {nova}")
+    else:
+        print("SEM CONFLITOS LL(1)")
