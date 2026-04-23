@@ -7,7 +7,11 @@ EPSILON = "epsilon"
 EOF = "$"
 
 TERMINAIS = {
-    "LPAREN",
+    "LPAREN_CMD",
+    "LPAREN_END",
+    "LPAREN_ELSE",
+    "LPAREN_ENDIF",
+    "LPAREN_ENDWHILE",
     "RPAREN",
     "NUMBER",
     "MEMORY",
@@ -30,10 +34,10 @@ def construirGramatica():
             ["abre_start", "lista_prog", "fecha_end"],
         ],
         "abre_start": [
-            ["LPAREN", "START", "RPAREN"],
+            ["LPAREN_CMD", "START", "RPAREN"],
         ],
         "fecha_end": [
-            ["LPAREN", "END", "RPAREN"],
+            ["LPAREN_END", "END", "RPAREN"],
         ],
 
         "lista_prog": [
@@ -50,32 +54,32 @@ def construirGramatica():
         ],
 
         "comando": [
-            ["LPAREN", "interior"],
+            ["LPAREN_CMD", "interior"],
         ],
 
         "interior": [
             ["NUMBER", "apos_num"],
             ["MEMORY", "apos_mem"],
-            ["LPAREN", "sub", "apos_sub"],
+            ["LPAREN_CMD", "sub", "apos_sub"],
         ],
 
         "apos_num": [
             ["RES", "RPAREN"],
             ["NUMBER", "resto_num"],
             ["MEMORY", "resto_mem_grava"],
-            ["LPAREN", "sub", "resto_sub"],
+            ["LPAREN_CMD", "sub", "resto_sub"],
         ],
         "apos_mem": [
             ["RPAREN"],
             ["NUMBER", "resto_num"],
             ["MEMORY", "resto_mem_grava"],
-            ["LPAREN", "sub", "resto_sub"],
+            ["LPAREN_CMD", "sub", "resto_sub"],
         ],
         "apos_sub": [
             ["RPAREN"],
             ["NUMBER", "resto_num"],
             ["MEMORY", "resto_mem_grava"],
-            ["LPAREN", "sub", "resto_sub"],
+            ["LPAREN_CMD", "sub", "resto_sub"],
         ],
 
         "resto_num": [
@@ -104,38 +108,39 @@ def construirGramatica():
         ],
 
         "abre_else": [
-            ["LPAREN", "ELSE", "RPAREN"],
+            ["LPAREN_ELSE", "ELSE", "RPAREN"],
         ],
         "abre_endif": [
-            ["LPAREN", "ENDIF", "RPAREN"],
+            ["LPAREN_ENDIF", "ENDIF", "RPAREN"],
         ],
         "abre_endwhile": [
-            ["LPAREN", "ENDWHILE", "RPAREN"],
+            ["LPAREN_ENDWHILE", "ENDWHILE", "RPAREN"],
         ],
 
+        # Sub-expressoes: versao restrita de interior (sem abrir IF/WHILE)
         "sub": [
             ["NUMBER", "apos_num_sub"],
             ["MEMORY", "apos_mem_sub"],
-            ["LPAREN", "sub", "apos_sub_sub"],
+            ["LPAREN_CMD", "sub", "apos_sub_sub"],
         ],
 
         "apos_num_sub": [
             ["RES", "RPAREN"],
             ["NUMBER", "resto_num_sub"],
             ["MEMORY", "resto_mem_grava_sub"],
-            ["LPAREN", "sub", "resto_sub_sub"],
+            ["LPAREN_CMD", "sub", "resto_sub_sub"],
         ],
         "apos_mem_sub": [
             ["RPAREN"],
             ["NUMBER", "resto_num_sub"],
             ["MEMORY", "resto_mem_grava_sub"],
-            ["LPAREN", "sub", "resto_sub_sub"],
+            ["LPAREN_CMD", "sub", "resto_sub_sub"],
         ],
         "apos_sub_sub": [
             ["RPAREN"],
             ["NUMBER", "resto_num_sub"],
             ["MEMORY", "resto_mem_grava_sub"],
-            ["LPAREN", "sub", "resto_sub_sub"],
+            ["LPAREN_CMD", "sub", "resto_sub_sub"],
         ],
 
         "resto_num_sub": [
