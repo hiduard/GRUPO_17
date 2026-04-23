@@ -70,6 +70,7 @@ def salvar_gramatica_markdown(gramatica, caminho):
         else:
             arquivo.write("Sem conflitos LL(1).\n")
 
+
 def salvar_gramatica_com_arvore(gramatica, arvore, caminho):
     salvar_gramatica_markdown(gramatica, caminho)
     with open(caminho, "a", encoding="utf-8") as arquivo:
@@ -78,6 +79,7 @@ def salvar_gramatica_com_arvore(gramatica, arvore, caminho):
         arquivo.write("```\n")
         arquivo.write(arvoreParaTexto(arvore))
         arquivo.write("\n```\n")
+
 
 def salvar_resultado_parser(resultado, caminho):
     garantir_pasta(caminho)
@@ -105,6 +107,7 @@ def salvar_resultado_parser(resultado, caminho):
             arquivo.write(json.dumps(derivacao, ensure_ascii=False))
             arquivo.write("\n")
 
+
 def salvar_assembly(codigo, caminho):
     garantir_pasta(caminho)
     with open(caminho, "w", encoding="utf-8") as arquivo:
@@ -120,38 +123,101 @@ def carregar_entrada(nome_arquivo):
         tokens = parseExpressao(linha)
         tokens_por_linha.append((numero_linha, linha, tokens))
     return tokens_por_linha
-       
+
 
 def main():
     if len(sys.argv) != 2:
         print("Uso: python main.py <arquivo_de_entrada>")
+        print("Exemplo: python main.py teste1.txt")
         return
 
     nome_arquivo = sys.argv[1]
+
     if not os.path.isfile(nome_arquivo):
         print(f"Erro: arquivo '{nome_arquivo}' nao encontrado.")
         return
 
+    # --- Etapa 1: analise lexica ---
     tokens_por_linha = carregar_entrada(nome_arquivo)
+
+    # --- Etapa 2: construcao da gramatica LL(1) ---
     gramatica = construirGramatica()
+
+    if gramatica["conflitos"]:
+        print("AVISO: gramatica possui conflitos LL(1)!")
+        for c in gramatica["conflitos"]:
+            print(f"  Conflito em {c[0]}, {c[1]}: {c[2]} x {c[3]}")
+
+    # --- Etapa 3: parsing LL(1) ---
     resultado = parsear(tokens_por_linha, gramatica["tabela"])
 
+    # Salva tokens para reexecucao (compativel com lerTokens / Fase 1)
     salvarTokens(tokens_por_linha, "output/tokens_saida.txt")
     salvar_resultado_parser(resultado, "output/parser_resultado.txt")
 
     print(f"ACEITO: {resultado['aceito']}")
 
     if not resultado["aceito"]:
-        salvar_gramatica_markdown(gramatica, "docs/gramatica_ll1.md")
+        if resultado.get("erros_lexicos"):
+            for e in resultado["erros_lexicos"]:
+                print(f"ERRO LEXICO: {e}")
+        else:
+            print(f"ERRO SINTATICO: {resultado['erro']}")
+
+        # Em rejeicao, salva a gramatica preservando a arvore do ultimo
+        # teste valido, se ja existir no markdown.
+        caminho_md = "docs/gramatica_ll1.md"
+        ja_tem_arvore = False
+        if os.path.isfile(caminho_md):
+            with open(caminho_md, encoding="utf-8") as f:
+                ja_tem_arvore = "Arvore Sintatica" in f.read()
+        if not ja_tem_arvore:
+            salvar_gramatica_markdown(gramatica, caminho_md)
+
+        print("\nArquivos gerados:")
+        print("  output/tokens_saida.txt")
+        print("  output/parser_resultado.txt")
+        print("  docs/gramatica_ll1.md")
         return
 
-    arvore = gerarArvore(resultado)
+    # --- Etapa 4: integracao da arvore sintatica ---
+    try:
+        arvore = gerarArvore(resultado)
+    except ValueError as e:
+        print(f"ERRO ao obter arvore: {e}")
+        return
+
     salvarArvoreJSON(arvore, "output/arvore.json")
     salvarArvoreTexto(arvore, "output/arvore.txt")
 
-    codigo = gerarAssembly(arvore)
+    # --- Etapa 5: geracao de Assembly ARMv7 ---
+    try:
+        codigo = gerarAssembly(arvore)
+    except ValueError as e:
+        print(f"ERRO na geracao de Assembly: {e}")
+        salvar_gramatica_com_arvore(gramatica, arvore, "docs/gramatica_ll1.md")
+        print("\nArquivos gerados (sem Assembly):")
+        print("  output/tokens_saida.txt")
+        print("  output/parser_resultado.txt")
+        print("  output/arvore.json")
+        print("  output/arvore.txt")
+        print("  docs/gramatica_ll1.md")
+        return
+
     salvar_assembly(codigo, "output/programa.s")
     salvar_gramatica_com_arvore(gramatica, arvore, "docs/gramatica_ll1.md")
+
+    print("\nARVORE SINTATICA:\n")
+    print(arvoreParaTexto(arvore))
+
+    print("\nArquivos gerados:")
+    print("  output/tokens_saida.txt")
+    print("  output/parser_resultado.txt")
+    print("  output/arvore.json")
+    print("  output/arvore.txt")
+    print("  output/programa.s")
+    print("  docs/gramatica_ll1.md")
+
 
 if __name__ == "__main__":
     main()
