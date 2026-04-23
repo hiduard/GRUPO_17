@@ -1,4 +1,3 @@
-# Integrantes do grupo (ordem alfabética):
 # Eduardo Hideo Itinoseke Ogassawara - hiduard
 # Gabriel Barbosa Fernandes de Oliveira - GabrielBarbosaFernandes
 #
@@ -18,6 +17,19 @@ def normalizarLiteralDouble(valor):
 def novoRotulo(ctx, prefixo, linha):
     ctx["contador_rotulos"] += 1
     return f"{prefixo}_{linha}_{ctx['contador_rotulos']}"
+
+def gerarCodigoDoubleParaInt(reg_double, reg_single, reg_int):
+    return [
+        f"    vcvt.s32.f64 {reg_single}, {reg_double}",
+        f"    vmov {reg_int}, {reg_single}",
+    ]
+
+
+def gerarCodigoIntParaDouble(reg_int, reg_single, reg_double):
+    return [
+        f"    vmov {reg_single}, {reg_int}",
+        f"    vcvt.f64.s32 {reg_double}, {reg_single}",
+    ]
 
 def coletarConstantesExpressao(no, constantes):
     tipo = no["tipo"]
@@ -139,6 +151,106 @@ def gerarInstrucaoOperador(operador):
         return "    vdiv.f64 d0, d1, d0"
     return None
 
+def gerarCodigoDivisaoInteira(esquerda, direita, linha_atual, ctx):
+
+    lbl_divzero = novoRotulo(ctx, "DIVZERO", linha_atual)
+    lbl_loop    = novoRotulo(ctx, "DIV_LOOP", linha_atual)
+    lbl_fim     = novoRotulo(ctx, "DIVINT_FIM", linha_atual)
+    lbl_neg     = novoRotulo(ctx, "DIVINT_NEG", linha_atual)
+    lbl_end     = novoRotulo(ctx, "DIVINT_END", linha_atual)
+
+    linhas = []
+
+    linhas.extend(esquerda)
+    linhas.append("    vpush {d0}")
+    linhas.extend(direita)
+    linhas.append("    vpop {d1}")
+
+    linhas.extend(gerarCodigoDoubleParaInt("d1", "s2", "r4"))
+    linhas.extend(gerarCodigoDoubleParaInt("d0", "s0", "r5"))
+
+    linhas.append("    cmp r5, #0")
+    linhas.append(f"    beq {lbl_divzero}")
+
+    linhas.append("    eor r7, r4, r5")
+
+    linhas.append("    cmp r4, #0")
+    linhas.append("    rsblt r4, r4, #0")
+    linhas.append("    cmp r5, #0")
+    linhas.append("    rsblt r5, r5, #0")
+
+    linhas.append("    mov r6, #0")
+    linhas.append(f"{lbl_loop}:")
+    linhas.append("    cmp r4, r5")
+    linhas.append(f"    blt {lbl_fim}")
+    linhas.append("    sub r4, r4, r5")
+    linhas.append("    add r6, r6, #1")
+    linhas.append(f"    b {lbl_loop}")
+
+    linhas.append(f"{lbl_divzero}:")
+    linhas.append("    mov r6, #0")
+    linhas.append(f"    b {lbl_end}")
+
+    linhas.append(f"{lbl_fim}:")
+    linhas.append("    cmp r7, #0")
+    linhas.append(f"    bge {lbl_end}")
+    linhas.append(f"    b {lbl_neg}")
+    linhas.append(f"{lbl_neg}:")
+    linhas.append("    rsb r6, r6, #0")
+
+    linhas.append(f"{lbl_end}:")
+    linhas.extend(gerarCodigoIntParaDouble("r6", "s0", "d0"))
+    return linhas
+
+def gerarCodigoRestoInteiro(esquerda, direita, linha_atual, ctx):
+    lbl_divzero = novoRotulo(ctx, "RESTO_DIVZERO", linha_atual)
+    lbl_loop    = novoRotulo(ctx, "RESTO_LOOP", linha_atual)
+    lbl_fim     = novoRotulo(ctx, "RESTO_FIM", linha_atual)
+    lbl_neg     = novoRotulo(ctx, "RESTO_NEG", linha_atual)
+    lbl_end     = novoRotulo(ctx, "RESTO_END", linha_atual)
+
+    linhas = []
+
+    linhas.extend(esquerda)
+    linhas.append("    vpush {d0}")
+    linhas.extend(direita)
+    linhas.append("    vpop {d1}")
+
+    linhas.extend(gerarCodigoDoubleParaInt("d1", "s2", "r4"))
+    linhas.extend(gerarCodigoDoubleParaInt("d0", "s0", "r5"))
+
+    linhas.append("    cmp r5, #0")
+    linhas.append(f"    beq {lbl_divzero}")
+
+    linhas.append("    mov r7, r4")
+
+    linhas.append("    cmp r4, #0")
+    linhas.append("    rsblt r4, r4, #0")
+    linhas.append("    cmp r5, #0")
+    linhas.append("    rsblt r5, r5, #0")
+
+    linhas.append(f"{lbl_loop}:")
+    linhas.append("    cmp r4, r5")
+    linhas.append(f"    blt {lbl_fim}")
+    linhas.append("    sub r4, r4, r5")
+    linhas.append(f"    b {lbl_loop}")
+
+    linhas.append(f"{lbl_divzero}:")
+    linhas.append("    mov r4, #0")
+    linhas.append(f"    b {lbl_end}")
+
+    linhas.append(f"{lbl_fim}:")
+    linhas.append("    cmp r7, #0")
+    linhas.append(f"    bge {lbl_end}")
+    linhas.append(f"    b {lbl_neg}")
+    linhas.append(f"{lbl_neg}:")
+    linhas.append("    rsb r4, r4, #0")
+
+    linhas.append(f"{lbl_end}:")
+    linhas.extend(gerarCodigoIntParaDouble("r4", "s0", "d0"))
+    return linhas
+
+
 def gerarCodigoNo(no, linha_atual, ctx):
     tipo = no["tipo"]
 
@@ -188,7 +300,23 @@ def gerarCodigoNo(no, linha_atual, ctx):
             linhas.append("    vpop {d1}")
             linhas.append(instrucao)
             return linhas
+        
+        if operador == "/":
+            return gerarCodigoDivisaoInteira(
+                gerarCodigoNo(no["esquerda"], linha_atual, ctx),
+                gerarCodigoNo(no["direita"], linha_atual, ctx),
+                linha_atual,
+                ctx,
+            )
 
+        if operador == "%":
+            return gerarCodigoRestoInteiro(
+                gerarCodigoNo(no["esquerda"], linha_atual, ctx),
+                gerarCodigoNo(no["direita"], linha_atual, ctx),
+                linha_atual,
+                ctx,
+            )
+        
         raise ValueError(f"Operador binario ainda nao implementado: {operador}")
     raise ValueError(f"No nao suportado ainda: {tipo}")
 
