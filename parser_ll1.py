@@ -29,6 +29,37 @@ PROMOCAO_LPAREN = {
     ENDWHILE: "LPAREN_ENDWHILE",
 }
 
+def achatarTokens(tokens_por_linha):
+    fluxo = []
+    linhas = []
+    fontes = {}
+
+    for numero_linha, fonte, tokens in tokens_por_linha:
+        fontes[numero_linha] = fonte
+        for tok in tokens:
+            fluxo.append(tok)
+            linhas.append(numero_linha)
+
+    return fluxo, linhas, fontes
+
+
+def extrairErrosLexicos(fluxo, linhas, fontes):
+    erros = []
+    novo_fluxo = []
+    novas_linhas = []
+
+    for i, (tipo, valor) in enumerate(fluxo):
+        if tipo == INVALID:
+            linha = linhas[i]
+            fonte = fontes.get(linha, "")
+            erros.append(f"Linha {linha}: token lexico invalido '{valor}' em: {fonte}")
+        else:
+            novo_fluxo.append((tipo, valor))
+            novas_linhas.append(linhas[i])
+
+    return erros, novo_fluxo, novas_linhas
+
+
 def promoverLParens(fluxo):
     promovido = []
     n = len(fluxo)
@@ -49,6 +80,7 @@ def promoverLParens(fluxo):
         promovido.append((classe, valor))
 
     return promovido
+
 
 class ParserLL1:
     def __init__(self, fluxo_promovido, linhas, fontes, tabela):
