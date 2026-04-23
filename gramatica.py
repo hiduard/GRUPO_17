@@ -154,14 +154,59 @@ def construirGramatica():
     }
 
     nao_terminais = set(producoes.keys())
+    first = calcularFirst(producoes, nao_terminais)
+
 
     return {
         "simbolo_inicial": "programa",
         "producoes": producoes,
         "nao_terminais": nao_terminais,
         "terminais": TERMINAIS,
+        "first": first,
     }
 
+def calcularFirst(producoes, nao_terminais):
+    """
+    Calcula o conjunto FIRST para cada nao-terminal usando o algoritmo de
+    ponto fixo: repete ate que nenhum FIRST mude.
+    """
+    first = {nt: set() for nt in nao_terminais}
+
+    mudou = True
+    while mudou:
+        mudou = False
+        for A, regras in producoes.items():
+            for regra in regras:
+                first_seq = calcularFirstDaSequencia(regra, first, nao_terminais)
+                tamanho_antes = len(first[A])
+                first[A].update(first_seq)
+                if len(first[A]) != tamanho_antes:
+                    mudou = True
+
+    return first
+
+def calcularFirstDaSequencia(sequencia, first, nao_terminais):
+    if not sequencia:
+        return {EPSILON}
+
+    resultado = set()
+
+    for simbolo in sequencia:
+        if simbolo == EPSILON:
+            resultado.add(EPSILON)
+            return resultado
+
+        if simbolo not in nao_terminais:
+            resultado.add(simbolo)  # terminal: FIRST = { terminal }
+            return resultado
+
+        resultado.update(first[simbolo] - {EPSILON})
+
+        if EPSILON not in first[simbolo]:
+            return resultado
+
+    resultado.add(EPSILON)
+    return resultado
 
 def formatarRegra(A, regra):
     return f"{A} -> {' '.join(regra)}"
