@@ -1,0 +1,69 @@
+programa [1..21]
+  expressao [linha 2]
+    gravar_memoria(X)
+      numero(10.0)
+  expressao [linha 3]
+    gravar_memoria(Y)
+      numero(20)
+  expressao [linha 4]
+    gravar_memoria(PI)
+      numero(3.5)
+  expressao [linha 5]
+    gravar_memoria(SOMA)
+      binaria(+)
+        memoria(X)
+        memoria(Y)
+  expressao [linha 6]
+    gravar_memoria(DOBRO)
+      binaria(*)
+        memoria(SOMA)
+        numero(2.0)
+  expressao [linha 7]
+    gravar_memoria(MEDIA)
+      binaria(|)
+        memoria(DOBRO)
+        numero(4.0)
+  expressao [linha 8]
+    gravar_memoria(QUOC)
+      binaria(/)
+        memoria(DOBRO)
+        numero(3)
+  expressao [linha 9]
+    gravar_memoria(RESTO)
+      binaria(%)
+        memoria(DOBRO)
+        numero(3)
+  expressao [linha 10]
+    gravar_memoria(POT)
+      binaria(^)
+        memoria(X)
+        numero(2)
+  expressao [linha 11]
+    gravar_memoria(ULTIMO)
+      res(2)
+  expressao [linha 12]
+    memoria(SOMA)
+  if [linha 13]
+    condicao:
+      relacional(>)
+        memoria(X)
+        memoria(Y)
+    then:
+      expressao [linha 14]
+        gravar_memoria(SAIDA)
+          numero(1)
+    else:
+      expressao [linha 16]
+        gravar_memoria(SAIDA)
+          numero(0)
+  while [linha 18]
+    condicao:
+      relacional(>)
+        memoria(X)
+        numero(0.0)
+    bloco:
+      expressao [linha 19]
+        gravar_memoria(X)
+          binaria(-)
+            memoria(X)
+            numero(1)

@@ -1,0 +1,281 @@
+{
+  "tipo": "programa",
+  "linha_inicio": 1,
+  "linha_fim": 21,
+  "comandos": [
+    {
+      "tipo": "expressao",
+      "linha": 2,
+      "fonte": "(10.0 X)",
+      "estrutura": {
+        "tipo": "gravar_memoria",
+        "nome": "X",
+        "valor": {
+          "tipo": "numero",
+          "valor": "10.0"
+        }
+      }
+    },
+    {
+      "tipo": "expressao",
+      "linha": 3,
+      "fonte": "(20 Y)",
+      "estrutura": {
+        "tipo": "gravar_memoria",
+        "nome": "Y",
+        "valor": {
+          "tipo": "numero",
+          "valor": "20"
+        }
+      }
+    },
+    {
+      "tipo": "expressao",
+      "linha": 4,
+      "fonte": "(3.5 PI)",
+      "estrutura": {
+        "tipo": "gravar_memoria",
+        "nome": "PI",
+        "valor": {
+          "tipo": "numero",
+          "valor": "3.5"
+        }
+      }
+    },
+    {
+      "tipo": "expressao",
+      "linha": 5,
+      "fonte": "(((X) (Y) +) SOMA)",
+      "estrutura": {
+        "tipo": "gravar_memoria",
+        "nome": "SOMA",
+        "valor": {
+          "tipo": "binaria",
+          "operador": "+",
+          "esquerda": {
+            "tipo": "carregar_memoria",
+            "nome": "X"
+          },
+          "direita": {
+            "tipo": "carregar_memoria",
+            "nome": "Y"
+          }
+        }
+      }
+    },
+    {
+      "tipo": "expressao",
+      "linha": 6,
+      "fonte": "(((SOMA) 2.0 *) DOBRO)",
+      "estrutura": {
+        "tipo": "gravar_memoria",
+        "nome": "DOBRO",
+        "valor": {
+          "tipo": "binaria",
+          "operador": "*",
+          "esquerda": {
+            "tipo": "carregar_memoria",
+            "nome": "SOMA"
+          },
+          "direita": {
+            "tipo": "numero",
+            "valor": "2.0"
+          }
+        }
+      }
+    },
+    {
+      "tipo": "expressao",
+      "linha": 7,
+      "fonte": "(((DOBRO) 4.0 |) MEDIA)",
+      "estrutura": {
+        "tipo": "gravar_memoria",
+        "nome": "MEDIA",
+        "valor": {
+          "tipo": "binaria",
+          "operador": "|",
+          "esquerda": {
+            "tipo": "carregar_memoria",
+            "nome": "DOBRO"
+          },
+          "direita": {
+            "tipo": "numero",
+            "valor": "4.0"
+          }
+        }
+      }
+    },
+    {
+      "tipo": "expressao",
+      "linha": 8,
+      "fonte": "(((DOBRO) 3 /) QUOC)",
+      "estrutura": {
+        "tipo": "gravar_memoria",
+        "nome": "QUOC",
+        "valor": {
+          "tipo": "binaria",
+          "operador": "/",
+          "esquerda": {
+            "tipo": "carregar_memoria",
+            "nome": "DOBRO"
+          },
+          "direita": {
+            "tipo": "numero",
+            "valor": "3"
+          }
+        }
+      }
+    },
+    {
+      "tipo": "expressao",
+      "linha": 9,
+      "fonte": "(((DOBRO) 3 %) RESTO)",
+      "estrutura": {
+        "tipo": "gravar_memoria",
+        "nome": "RESTO",
+        "valor": {
+          "tipo": "binaria",
+          "operador": "%",
+          "esquerda": {
+            "tipo": "carregar_memoria",
+            "nome": "DOBRO"
+          },
+          "direita": {
+            "tipo": "numero",
+            "valor": "3"
+          }
+        }
+      }
+    },
+    {
+      "tipo": "expressao",
+      "linha": 10,
+      "fonte": "(((X) 2 ^) POT)",
+      "estrutura": {
+        "tipo": "gravar_memoria",
+        "nome": "POT",
+        "valor": {
+          "tipo": "binaria",
+          "operador": "^",
+          "esquerda": {
+            "tipo": "carregar_memoria",
+            "nome": "X"
+          },
+          "direita": {
+            "tipo": "numero",
+            "valor": "2"
+          }
+        }
+      }
+    },
+    {
+      "tipo": "expressao",
+      "linha": 11,
+      "fonte": "((2 RES) ULTIMO)",
+      "estrutura": {
+        "tipo": "gravar_memoria",
+        "nome": "ULTIMO",
+        "valor": {
+          "tipo": "carregar_resultado",
+          "indice": "2"
+        }
+      }
+    },
+    {
+      "tipo": "expressao",
+      "linha": 12,
+      "fonte": "(SOMA)",
+      "estrutura": {
+        "tipo": "carregar_memoria",
+        "nome": "SOMA"
+      }
+    },
+    {
+      "tipo": "if",
+      "linha": 13,
+      "fonte": "((X) (Y) > IF)",
+      "condicao": {
+        "tipo": "relacional",
+        "operador": ">",
+        "esquerda": {
+          "tipo": "carregar_memoria",
+          "nome": "X"
+        },
+        "direita": {
+          "tipo": "carregar_memoria",
+          "nome": "Y"
+        }
+      },
+      "bloco_then": [
+        {
+          "tipo": "expressao",
+          "linha": 14,
+          "fonte": "(1 SAIDA)",
+          "estrutura": {
+            "tipo": "gravar_memoria",
+            "nome": "SAIDA",
+            "valor": {
+              "tipo": "numero",
+              "valor": "1"
+            }
+          }
+        }
+      ],
+      "bloco_else": [
+        {
+          "tipo": "expressao",
+          "linha": 16,
+          "fonte": "(0 SAIDA)",
+          "estrutura": {
+            "tipo": "gravar_memoria",
+            "nome": "SAIDA",
+            "valor": {
+              "tipo": "numero",
+              "valor": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "tipo": "while",
+      "linha": 18,
+      "fonte": "((X) 0.0 > WHILE)",
+      "condicao": {
+        "tipo": "relacional",
+        "operador": ">",
+        "esquerda": {
+          "tipo": "carregar_memoria",
+          "nome": "X"
+        },
+        "direita": {
+          "tipo": "numero",
+          "valor": "0.0"
+        }
+      },
+      "bloco": [
+        {
+          "tipo": "expressao",
+          "linha": 19,
+          "fonte": "(((X) 1 -) X)",
+          "estrutura": {
+            "tipo": "gravar_memoria",
+            "nome": "X",
+            "valor": {
+              "tipo": "binaria",
+              "operador": "-",
+              "esquerda": {
+                "tipo": "carregar_memoria",
+                "nome": "X"
+              },
+              "direita": {
+                "tipo": "numero",
+                "valor": "1"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

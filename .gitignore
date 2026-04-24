@@ -28,3 +28,7 @@ Thumbs.db
 # Arquivos temporários de teste
 *.tmp
 *.bak
+
+# Permite versionar artefatos gerados
+!output/
+!docs/
