@@ -131,7 +131,24 @@ python -u main.py teste2.txt
 
 Para cada um dos testes válidos (`teste1.txt`, `teste2.txt`, `teste3.txt`), gere o Assembly e valide no CPUlator. Os valores finais nas memórias são o critério de correção funcional.
 
+### Validação realizada
+
+O grupo executou o Assembly de `teste1.txt` no CPUlator ARMv7 DEC1-SOC(v16.1) e conferiu que os valores finais das memórias batem com o esperado. O screenshot da execução está em `docs/cpulator_teste1.png`.
+
+Resumo dos valores verificados na execução de `teste1.txt`:
+
+| Símbolo | Esperado | Obtido |
+|---|---|---|
+| `MEM_X` | `0.0` | ✓ |
+| `MEM_Y` | `20.0` | ✓ |
+| `MEM_SOMA` | `30.0` | ✓ |
+| `MEM_DOBRO` | `60.0` | ✓ |
+| `MEM_MEDIA` | `15.0` | ✓ |
+| `MEM_SAIDA` | `0.0` | ✓ |
+
 ---
+
+
 
 ## Estrutura do Repositório
 
