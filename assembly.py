@@ -500,11 +500,161 @@ def gerarCodigoComando(comando, ctx):
 
     raise ValueError(f"Comando nao suportado ainda: {tipo}")
 
+
+def gerarStringsUART(memorias):
+    linhas = []
+    linhas.append("@ Strings para impressao no JTAG UART")
+    for nome in sorted(memorias):
+        linhas.append(f'STR_{nome}: .asciz "{nome}="')
+    linhas.append('STR_NL: .asciz "\\n"')
+    linhas.append('STR_PONTO: .asciz "."')
+    linhas.append('STR_MENOS: .asciz "-"')
+    linhas.append("PRINT_BUF: .space 12")
+    return linhas
+
+
+def gerarBlocoImpressaoUART(memorias):
+    linhas = []
+    linhas.append("")
+    linhas.append("@ ============================================================")
+    linhas.append("@ Impressao dos resultados no JTAG UART")
+    linhas.append("@ ============================================================")
+    for nome in sorted(memorias):
+        linhas.append(f"    @ Imprime {nome}")
+        linhas.append(f"    ldr r1, =STR_{nome}")
+        linhas.append("    bl print_str")
+        linhas.append(f"    ldr r0, =MEM_{nome}")
+        linhas.append("    vldr d0, [r0]")
+        linhas.append("    bl print_double")
+        linhas.append("    ldr r1, =STR_NL")
+        linhas.append("    bl print_str")
+    return linhas
+
+
+SUBROTINAS_UART = """
+@ ============================================================
+@ Subrotinas de impressao no JTAG UART (0xFF201000)
+@ Polling correto: verifica espaco na FIFO de escrita antes
+@ ============================================================
+
+@ print_char: imprime caractere em r2 (espera FIFO ter espaco)
+print_char:
+    push {r0, r3, lr}
+    ldr r0, =0xFF201000
+pc_wait:
+    ldr r3, [r0, #4]
+    lsr r3, r3, #16
+    cmp r3, #0
+    beq pc_wait
+    str r2, [r0]
+    pop {r0, r3, lr}
+    bx lr
+
+@ print_str: imprime string em r1
+print_str:
+    push {r2, lr}
+ps_loop:
+    ldrb r2, [r1], #1
+    cmp r2, #0
+    beq ps_ret
+    bl print_char
+    b ps_loop
+ps_ret:
+    pop {r2, lr}
+    bx lr
+
+@ print_int: imprime inteiro em r1
+print_int:
+    push {r4, r5, r6, r7, lr}
+    mov r4, r1
+    ldr r6, =PRINT_BUF
+    add r6, r6, #11
+    mov r7, #0
+    strb r7, [r6]
+    cmp r4, #0
+    bge pi_conv
+    ldr r1, =STR_MENOS
+    bl print_str
+    rsb r4, r4, #0
+pi_conv:
+    sub r6, r6, #1
+    mov r7, r4
+    mov r4, #0
+pi_d10:
+    cmp r7, #10
+    blt pi_d10d
+    sub r7, r7, #10
+    add r4, r4, #1
+    b pi_d10
+pi_d10d:
+    add r7, r7, #48
+    strb r7, [r6]
+    cmp r4, #0
+    bne pi_conv
+pi_imp:
+    ldrb r2, [r6], #1
+    cmp r2, #0
+    beq pi_fim
+    bl print_char
+    b pi_imp
+pi_fim:
+    pop {r4, r5, r6, r7, lr}
+    bx lr
+
+@ print_double: imprime double em d0 com 2 casas decimais
+print_double:
+    push {r4, r5, lr}
+    vmov r4, r5, d0
+    tst r5, #0x80000000
+    beq pd_pos
+    ldr r1, =STR_MENOS
+    bl print_str
+    vneg.f64 d0, d0
+pd_pos:
+    vcvt.s32.f64 s0, d0
+    vmov r1, s0
+    bl print_int
+    ldr r1, =STR_PONTO
+    bl print_str
+    vcvt.f64.s32 d1, s0
+    vsub.f64 d0, d0, d1
+    ldr r4, =CONST_10_0
+    vldr d2, [r4]
+    vmul.f64 d0, d0, d2
+    vmul.f64 d0, d0, d2
+    vcvt.s32.f64 s0, d0
+    vmov r1, s0
+    cmp r1, #10
+    bge pd_2d
+    mov r2, #48
+    bl print_char
+pd_2d:
+    bl print_int
+    pop {r4, r5, lr}
+    bx lr
+"""
+
+
 def gerarAssembly(arvore):
     ctx = {"contador_rotulos": 0}
 
-    linhas = []
-    linhas.extend(gerarSecaoDados(arvore))
+    constantes = {"0.0", "1.0"}
+    memorias = set()
+    coletarPrograma(arvore, constantes, memorias)
+
+    # secao .data
+    linhas = [".data"]
+    for valor in sorted(constantes):
+        rotulo = gerarRotuloConstante(valor)
+        literal = normalizarLiteralDouble(valor)
+        linhas.append(f"{rotulo}: .double {literal}")
+    for nome in sorted(memorias):
+        linhas.append(f"MEM_{nome}: .double 0.0")
+    for numero_linha in range(1, arvore["linha_fim"] + 1):
+        linhas.append(f"RESULTADO_{numero_linha}: .double 0.0")
+    linhas.append("")
+    linhas.extend(gerarStringsUART(memorias))
+
     linhas.append("")
     linhas.append(".text")
     linhas.append(".global _start")
@@ -513,6 +663,11 @@ def gerarAssembly(arvore):
     for comando in arvore["comandos"]:
         linhas.extend(gerarCodigoComando(comando, ctx))
 
+    linhas.extend(gerarBlocoImpressaoUART(memorias))
+
+    linhas.append("")
+    linhas.append("    b fim")
+    linhas.append(SUBROTINAS_UART)
     linhas.append("")
     linhas.append("fim:")
     linhas.append("    b fim")
